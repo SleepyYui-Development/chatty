@@ -10,7 +10,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
 
 firebase.initializeApp({
-  // google api key stuff
+// google auth thingy
 })
 
 const auth = firebase.auth();
@@ -35,7 +35,23 @@ function App() {
   );
 }
 
+function doStuff() {
+  const bannedTokens = [];
+  firebase.firestore().collection('bannedusers').get().then(querySnapshot => {
+    // console.log(querySnapshot);
+      querySnapshot.forEach(doc => {
+        const check = doc.data().email;
+          // console.log(check);
+          bannedTokens.push(check);
+      });
+  });
+  // console.log(bannedTokens);
+  return (bannedTokens);
+}
+
 function SignIn() {
+
+
 
   const signInWithGoogle = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -45,17 +61,23 @@ function SignIn() {
     .then((result) => {
       /** @type {firebase.auth.OAuthCredential} */
       let email = result.user.email;
-      const usersRef = firestore.collection('bannedusers');
-      let query = usersRef.orderBy('bannedusers')
-      const [bannedTokens] = useCollectionData(query, { idField: 'id' });
-      const bannedEmails = bannedTokens.map(message => message.uid);
-      alert({bannedEmails});
-      if (!bannedEmails.includes(email)) {
+      const bannedEmails = doStuff();
+      /* console.log(email);
+      console.log(bannedEmails);
+      console.log(bannedEmails.includes(email));
+      console.log(bannedEmails.includes(email.toString()));
+      console.log(email.toString());
+      console.log(bannedEmails[0] == email.toString());
+      console.log(bannedEmails[0]); */
+
+      if (bannedEmails.includes(email.toString())) {
+        console.log('banned');
+        auth.signOut();
+        alert('Du wurdest gebannt.');
         return;
       }
       else {
-        auth.signOut();
-        alert('Du wurdest gebannt.');
+        console.log('not banned');
         return;
       }
     })
