@@ -10,7 +10,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
 
 firebase.initializeApp({
-// google auth here
+  // google api key stuff
 })
 
 const auth = firebase.auth();
@@ -39,14 +39,31 @@ function SignIn() {
 
   const signInWithGoogle = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
+    //auth.signInWithPopup(provider);
+    firebase.auth()
+    .signInWithPopup(provider)
+    .then((result) => {
+      /** @type {firebase.auth.OAuthCredential} */
+      let email = result.user.email;
+      const usersRef = firestore.collection('bannedusers');
+      let query = usersRef.orderBy('bannedusers')
+      const [bannedTokens] = useCollectionData(query, { idField: 'id' });
+      const bannedEmails = bannedTokens.map(message => message.uid);
+      alert({bannedEmails});
+      if (!bannedEmails.includes(email)) {
+        return;
+      }
+      else {
+        auth.signOut();
+        alert('Du wurdest gebannt.');
+        return;
+      }
+    })
   }
 
   const signInAnonymously = () => {
     auth.signInAnonymously();
   }
-
-
 
   return (
     <>
@@ -68,20 +85,44 @@ function SignOut() {
 function ChatRoom() {
   const dummy = useRef();
   const messagesRef = firestore.collection('messages');
-  const query = messagesRef.orderBy('createdAt').limit(25);
+  const usersRef = firestore.collection('bannedusers');
+  let query = messagesRef.orderBy('createdAt').limitToLast(25);
 
   const [messages] = useCollectionData(query, { idField: 'id' });
   const [formValue, setFormValue] = useState('');
 
 
   const sendMessage = async (e) => {
-    if (formValue.trim() === '') return;
+
+
+    /* if (formValue.trim() === '') return;
     if (formValue.trim() === ' ') return;
     if (formValue.length > 1024) {
-      alert('Bitte schreibe kürzere Nachrichten. Um weiterhin nachrichten schreiben zu können, musst du dich erneut anmelden.');
+      alert('Bitte schreibe kürzere Nachrichten. Um spam zu vermeiden wurdest du abgemeldet.');
       auth.signOut();
       return;
+    } */
+
+    // if the last 7 messages are from the same user his account will be blocked
+    if (messages.length > 6) {
+      let last7 = messages.slice(messages.length - 7, messages.length);
+      let last7Users = last7.map(message => message.uid);
+      // if every entry of last7users is uid
+      if (last7Users.every(uid => uid === last7Users[0])) {
+        auth.currentUser.delete();
+        let email = auth.currentUser.email;
+        await usersRef.add({
+          email,
+          bannedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        })
+        //alert('Du wurdest wegen spamming gebannt.');
+        return;
+      }
     }
+
+
+
+
 
 
 
@@ -120,9 +161,6 @@ function ChatRoom() {
         {messages && messages.map(msg => <ChatMessage key={msg.id} message={msg} />)}
         <span ref={dummy}></span>
       </main>
-      <form onSubmit={sendMessage}>
-        <input value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder="Du kannst nichts senden, da du anonym angemeldet bist." />
-      </form>
     </>)
   }
 }
