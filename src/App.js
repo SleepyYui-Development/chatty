@@ -10,7 +10,13 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
 
 firebase.initializeApp({
-// google auth thingy
+  apiKey: "AIzaSyA3bHscZldXSnVv0ltcmJaLjR3UNaULSqg",
+  authDomain: "sleepyyui-chatty.firebaseapp.com",
+  projectId: "sleepyyui-chatty",
+  storageBucket: "sleepyyui-chatty.appspot.com",
+  messagingSenderId: "771304114259",
+  appId: "1:771304114259:web:b96088e07f255b65749ea6",
+  measurementId: "G-8JL3TXKY7T"
 })
 
 const auth = firebase.auth();
@@ -35,19 +41,6 @@ function App() {
   );
 }
 
-function doStuff() {
-  const bannedTokens = [];
-  firebase.firestore().collection('bannedusers').get().then(querySnapshot => {
-    // console.log(querySnapshot);
-      querySnapshot.forEach(doc => {
-        const check = doc.data().email;
-          // console.log(check);
-          bannedTokens.push(check);
-      });
-  });
-  // console.log(bannedTokens);
-  return (bannedTokens);
-}
 
 function SignIn() {
 
@@ -61,14 +54,46 @@ function SignIn() {
     .then((result) => {
       /** @type {firebase.auth.OAuthCredential} */
       let email = result.user.email;
-      const bannedEmails = doStuff();
-      /* console.log(email);
+      const bannedEmails = [1];
+      firebase.firestore().collection('bannedusers').get().then(querySnapshot => {
+        setTimeout(() => {
+          querySnapshot.forEach(doc => {
+            const check = doc.data().email;
+              console.log(typeof check);
+              bannedEmails.push(check);
+            })
+          }, 500);
+          });
+      console.log(querySnapshot);
+      });
+      /*
+      console.log(email);
       console.log(bannedEmails);
-      console.log(bannedEmails.includes(email));
-      console.log(bannedEmails.includes(email.toString()));
+      console.log(bannedEmails.indexOf(email) > -1);
+      // console.log(bannedEmails.includes(email.toString()));
       console.log(email.toString());
-      console.log(bannedEmails[0] == email.toString());
-      console.log(bannedEmails[0]); */
+      // console.log(bannedEmails[0] == email.toString());
+      console.log(bannedEmails[0]);
+      // print type of bannedEmails
+      console.log(typeof email);
+      console.log(typeof bannedEmails);
+      console.log(typeof bannedEmails[0]);
+      let testarray = [1,2,"adsujsdfjsdjfsdjsduj@sdjhfdujhg.aedza",4,5];
+      console.log(testarray[2]);
+      */
+      console.log(bannedEmails.length);
+      for (let i = 0; i < bannedEmails.length; i++) {
+        // if email is in array
+        console.log(bannedEmails[i]);
+        if (bannedEmails[i] == email.toString()) {
+          // sign out
+          auth.signOut();
+          // alert user
+          alert("Du bist gesperrt!");
+          // break
+          break;
+        }
+      }
 
       if (bannedEmails.includes(email.toString())) {
         console.log('banned');
@@ -80,8 +105,8 @@ function SignIn() {
         console.log('not banned');
         return;
       }
-    })
-  }
+    }
+
 
   const signInAnonymously = () => {
     auth.signInAnonymously();
